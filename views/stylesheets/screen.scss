@@ -1,0 +1,11 @@
+@import 'mixins';
+@import 'variables';
+
+h1 {font-size: $type1;}
+h2 {font-size: $type2;}
+h3 {font-size: $type3;}
+h4 {font-size: $type4;}
+
+.land {fill: #666; opacity: 0.2; z-index: 0; position: relative}
+.route {fill: none; stroke: red; stroke-width: 1px; z-index: 10; position: relative}
+.point {fill:red}
