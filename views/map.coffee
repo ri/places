@@ -1,67 +1,103 @@
-#data
-route = {
-	type: "LineString",
-	coordinates: [[126.534967, 45.80377499999999],
-							  [115.8574693, -31.9530044],
-								[153.0234489, -27.4710107],
-								[ -87.6297982, 41.8781136],
-								[-122.4194155, 37.7749295],
-								[144.96328, -37.814107]
-								]
-}
+#set up globe
+globe = (attrs) ->
+	my = Object.create(attrs)
+	height = my.height || 1000
+	width = my.width || 1000
+	points = my.points || []
+	svg = my.svg
+	projection = d3.geo.orthographic()
+	path = d3.geo.path()
+	xRotate = d3.scale.linear()
+	yRotate = d3.scale.linear()
 
-#DOM elements
+	my.init = () ->
+		xRotate = d3.scale.linear()
+								.domain([0, width])
+								.range([-180, 180])
+		yRotate = d3.scale.linear()
+								.domain([0, height])
+								.range([90, -90])
+
+		projection.scale(300).center([100, 9]).translate([width / 2, height / 2]).clipAngle(90)
+
+		#Set up map
+		path.projection projection
+
+		#Draw map
+		d3.json "world-110m.json", (e, world) ->
+			svg.append("path")
+				.datum(topojson.feature(world, world.objects.land))
+				.attr(class: "land")
+				.attr(d: path)
+
+		d3.json points, (e, data) ->
+			points = data || []
+			
+			if points
+				my.drawPoints()
+				my.drawLines()
+
+	my.drawPoints = () ->
+		svg.selectAll("circle")
+			 .data(points)
+			.enter()
+			 .append("circle")
+			 .attr(class: "point")
+			 .attr(cx: (d) => projection([d.coords[0], d.coords[1]])[0])
+			 .attr(cy: (d) => projection([d.coords[0], d.coords[1]])[1])
+			 .attr(r: 5 )
+
+	my.drawLines = () ->
+		route = 
+			type: "LineString"
+			coordinates: points.map((point) -> point.coords)
+
+		svg.append("path")
+		 .datum(route)
+		 .attr("class", "route")
+		 .attr("d", path)
+
+	my.rotate = (x, y) ->
+		projection.rotate([xRotate(x), yRotate(y)])
+		svg.selectAll("path").attr(d: path)
+		svg.selectAll("circle")
+			.attr(cx: (d) => projection([d.coords[0], d.coords[1]])[0])
+			.attr(cy: (d) => projection([d.coords[0], d.coords[1]])[1])
+
+	my.addPoint = (lat, lon) ->
+		obj = {coords: [lon, lat]}
+		console.log points
+		points.push obj
+
+	my
+
+
 width = 1400
 height = 800
-xRotate = d3.scale.linear()
-    				.domain([0, width])
-    				.range([-180, 180])
-yRotate = d3.scale.linear()
-				    .domain([0, height])
-				    .range([90, -90])
 
 svg = d3.select("body").append("svg")
-	   	 .attr(width: width)
-	   	 .attr(height: height)
+			 .attr(width: width)
+			 .attr(height: height)
 
-#Set up map
-projection = d3.geo.orthographic()
-							.scale(300)
-							.center([100, 9])
-							.translate([width / 2, height / 2])
+myGlobe = globe({width: width, height: height, svg: svg})
+myGlobe.init()
 
-path = d3.geo.path()
-				.projection projection
-
-#Draw map
-d3.json "world-110m.json", (e, world) ->
-	svg.append("path")
-    .datum(topojson.feature(world, world.objects.land))
-    .attr(class: "land")
-    .attr(d: path)
-
-#Add points
-d3.json "places.json", (e, places) ->
-	svg.selectAll("circle")
-		 .data(places)
-		.enter()
-		 .append("circle")
-		 .attr(class: "point")
-		 .attr(cx: (d) => return projection([d.coords[0], d.coords[1]])[0])
-		 .attr(cy: (d) => return projection([d.coords[0], d.coords[1]])[1])
-		 .attr(r: 5 )
+#Google Maps code
+input = document.getElementById('gmaps-search');
+autocomplete = new google.maps.places.Autocomplete(input);
 
 #Rotate globe
 svg.on "mousemove", () -> 
-  p = d3.mouse(this)
-  projection.rotate([xRotate(p[0]), yRotate(p[1])])
-  svg.selectAll("path").attr(d: path)
-  svg.selectAll("circle")
-  	 .attr(cx: (d) => return projection([d.coords[0], d.coords[1]])[0])
-		 .attr(cy: (d) => return projection([d.coords[0], d.coords[1]])[1])
+	p = d3.mouse(this)
+	myGlobe.rotate(p[0], p[1])
 
-#Draw lines
-svg.append("path")
-    .datum(route)
-    .attr("class", "route")
-    .attr("d", path);
+#Submit Google form
+d3.select('#location-submit').on "click", () ->
+	place = autocomplete.getPlace();
+	lat = place.geometry.location.lat()
+	lon = place.geometry.location.lng()
+
+	myGlobe.addPoint(lat, lon)
+	myGlobe.drawPoints()
+	myGlobe.drawLines()
+

@@ -7,9 +7,12 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&libraries=places"></script>
     <link rel="stylesheet" href="/screen.css">
 	</head>
   <body>
+    <input type="text" id="gmaps-search" size="40">
+    <input type="submit" id="location-submit">
   	<%= yield %>
       <script src="/map.js"></script>
   </body>
